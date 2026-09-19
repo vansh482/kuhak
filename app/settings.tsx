@@ -37,7 +37,7 @@ function NavBar() {
     <View style={styles.nav}>
       <Animated.View style={animStyle}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           onPressIn={() => {
             scale.value = withSpring(0.97, { damping: 15 });
           }}

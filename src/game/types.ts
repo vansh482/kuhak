@@ -22,7 +22,7 @@ export interface DealtRound {
   config: RoundConfig;
   imposterIds: PlayerId[];
   secret: { word: string; category: string };
-  imposterHintText: string | null;
+  decoyWords: string[] | null;
   startSeat: number;
 }
 

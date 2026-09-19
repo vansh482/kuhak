@@ -1,5 +1,6 @@
 import type { Player, RNG, WordEntry } from './types';
-import { dealRoles, maxImposters, pickSecret, clueOrder, resolveVote } from './logic';
+import { dealRoles, maxImposters, pickSecret, decoySet, clueOrder, resolveVote } from './logic';
+import { getAllEntries } from '../content';
 
 // ---------------------------------------------------------------------------
 // Mock the content module (not yet built by another agent)
@@ -193,6 +194,45 @@ describe('pickSecret', () => {
       used.push(secret.word.toLowerCase());
     }
     expect(new Set(words).size).toBe(words.length);
+  });
+});
+
+// ===========================================================================
+// decoySet
+// ===========================================================================
+describe('decoySet', () => {
+  const pool = getAllEntries(['animals', 'food']);
+
+  it('always includes the secret word', () => {
+    const result = decoySet('Tiger', pool, 5, mulberry32(42));
+    expect(result).toContain('Tiger');
+  });
+
+  it('returns exactly n words', () => {
+    expect(decoySet('Tiger', pool, 5, mulberry32(1))).toHaveLength(5);
+    expect(decoySet('Tiger', pool, 3, mulberry32(2))).toHaveLength(3);
+  });
+
+  it('shuffles so secret is not always first', () => {
+    let timesFirst = 0;
+    for (let i = 0; i < 100; i++) {
+      const result = decoySet('Tiger', pool, 5, mulberry32(i));
+      if (result[0] === 'Tiger') timesFirst++;
+    }
+    expect(timesFirst).toBeLessThan(80);
+  });
+
+  it('caps at pool size when n exceeds available words', () => {
+    const smallPool = getAllEntries(['animals']);
+    const result = decoySet('Tiger', smallPool, 5, mulberry32(1));
+    expect(result).toHaveLength(3);
+  });
+
+  it('never contains duplicates', () => {
+    for (let i = 0; i < 50; i++) {
+      const result = decoySet('Tiger', pool, 5, mulberry32(i));
+      expect(new Set(result).size).toBe(result.length);
+    }
   });
 });
 

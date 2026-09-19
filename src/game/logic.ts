@@ -68,37 +68,26 @@ export function pickSecret(
 }
 
 /**
- * Generates a random hint about the secret word for the imposter.
- * Picks from several hint types so it's not always the same.
+ * Builds a decoy set: n words from the same pack pool, one of which
+ * is the real secret. Gives the imposter a semantic field to bluff
+ * from rather than structural puzzle clues.
+ *
+ * Difficulty is just n: Easy 3, Normal 5, Hard 8.
  */
-export function generateHint(word: string, rng: RNG): string {
-  const hints: string[] = [];
-  const letterOnly = word.replace(/[^a-zA-Z]/g, '');
-  const wordParts = word.trim().split(/\s+/);
-
-  hints.push(`${letterOnly.length} letters`);
-
-  if (wordParts.length > 1) {
-    hints.push(`${wordParts.length} words`);
-  }
-
-  const vowels = letterOnly.toLowerCase().match(/[aeiou]/g);
-  if (vowels) {
-    hints.push(`${vowels.length} vowels`);
-  }
-
-  if (letterOnly.length >= 6) {
-    const half = Math.ceil(letterOnly.length / 2);
-    hints.push(`Second half starts with "${letterOnly.charAt(half).toUpperCase()}"`);
-  }
-
-  const uniqueLetters = new Set(letterOnly.toLowerCase());
-  if (uniqueLetters.size !== letterOnly.length) {
-    hints.push('Has a repeated letter');
-  }
-
-  const idx = Math.floor(rng() * hints.length);
-  return hints[idx];
+export function decoySet(
+  secret: string,
+  pool: WordEntry[],
+  n: number,
+  rng: RNG,
+): string[] {
+  const others = pool
+    .filter((e) => e.word.toLowerCase() !== secret.toLowerCase())
+    .map((e) => e.word);
+  shuffle(others, rng);
+  const decoys = others.slice(0, n - 1);
+  const result = [secret, ...decoys];
+  shuffle(result, rng);
+  return result;
 }
 
 /**

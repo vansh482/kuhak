@@ -9,8 +9,8 @@ import Animated, {
 import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
-import { PACKS, ALL_PACK_IDS } from '../src/content';
-import { dealRoles, pickSecret, generateHint } from '../src/game/logic';
+import { PACKS, ALL_PACK_IDS, getAllEntries } from '../src/content';
+import { dealRoles, pickSecret, decoySet } from '../src/game/logic';
 import type { DealtRound } from '../src/game/types';
 
 const TIMER_OPTIONS = [
@@ -31,7 +31,7 @@ function NavBar() {
     <View style={styles.nav}>
       <Animated.View style={backAnimStyle}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           onPressIn={() => {
             backScale.value = withSpring(0.97, { damping: 15 });
           }}
@@ -138,9 +138,11 @@ export default function SetupScreen() {
     const secret = { word, category };
     const startSeat = Math.floor(Math.random() * roster.length);
 
-    const hintText =
+    const resolvedPacks = selectedPacks.includes('__mixed__') ? ALL_PACK_IDS : selectedPacks;
+    const pool = getAllEntries(resolvedPacks);
+    const decoys =
       imposterHint === 'category_hint'
-        ? generateHint(secret.word, Math.random)
+        ? decoySet(word, pool, 5, Math.random)
         : null;
 
     const round: DealtRound = {
@@ -153,7 +155,7 @@ export default function SetupScreen() {
       },
       imposterIds,
       secret,
-      imposterHintText: hintText,
+      decoyWords: decoys,
       startSeat,
     };
 
