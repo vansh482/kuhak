@@ -138,9 +138,8 @@ describe('maxImposters', () => {
 // ===========================================================================
 describe('pickSecret', () => {
   it('never returns empty word or category', () => {
-    const rng = mulberry32(1);
     for (let i = 0; i < 100; i++) {
-      const secret = pickSecret(['animals', 'food'], mulberry32(i));
+      const secret = pickSecret(['animals', 'food'], [], mulberry32(i));
       expect(secret.word.length).toBeGreaterThan(0);
       expect(secret.category.length).toBeGreaterThan(0);
     }
@@ -148,7 +147,7 @@ describe('pickSecret', () => {
 
   it('returns entries from the specified pack', () => {
     const rng = mulberry32(42);
-    const secret = pickSecret(['sports'], rng);
+    const secret = pickSecret(['sports'], [], rng);
     expect(secret.word).toBe('Cricket');
     expect(secret.category).toBe('Sports');
   });
@@ -157,10 +156,9 @@ describe('pickSecret', () => {
     const seenCategories = new Set<string>();
     for (let i = 0; i < 500; i++) {
       const rng = mulberry32(i);
-      const secret = pickSecret(['__mixed__'], rng);
+      const secret = pickSecret(['__mixed__'], [], rng);
       seenCategories.add(secret.category);
     }
-    // Should hit all three categories
     expect(seenCategories.has('Animals')).toBe(true);
     expect(seenCategories.has('Food')).toBe(true);
     expect(seenCategories.has('Sports')).toBe(true);
@@ -168,7 +166,33 @@ describe('pickSecret', () => {
 
   it('throws when no entries match', () => {
     const rng = mulberry32(1);
-    expect(() => pickSecret(['nonexistent'], rng)).toThrow('No entries found');
+    expect(() => pickSecret(['nonexistent'], [], rng)).toThrow('No entries found');
+  });
+
+  it('excludes used words', () => {
+    const used = ['tiger', 'elephant'];
+    const secret = pickSecret(['animals'], used, mulberry32(1));
+    expect(secret.word).toBe('Peacock');
+  });
+
+  it('resets bag when all words used', () => {
+    const used = ['tiger', 'elephant', 'peacock'];
+    const secret = pickSecret(['animals'], used, mulberry32(1));
+    expect(secret.bagExhausted).toBe(true);
+    expect(['Tiger', 'Elephant', 'Peacock']).toContain(secret.word);
+  });
+
+  it('never repeats across sequential picks', () => {
+    const used: string[] = [];
+    const words: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const secret = pickSecret(['animals', 'food'], used, mulberry32(i));
+      if (secret.bagExhausted) break;
+      expect(words).not.toContain(secret.word);
+      words.push(secret.word);
+      used.push(secret.word.toLowerCase());
+    }
+    expect(new Set(words).size).toBe(words.length);
   });
 });
 

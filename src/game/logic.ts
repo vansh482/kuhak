@@ -37,23 +37,34 @@ export function maxImposters(playerCount: number): number {
 }
 
 /**
- * Picks a random word + category from the specified content packs.
- * If packIds includes '__mixed__', samples across every available pack.
+ * Picks a random word + category from the specified content packs,
+ * excluding words already used this session. When all words are
+ * exhausted, resets the bag and picks from the full pool.
  */
 export function pickSecret(
   packIds: string[],
+  usedWords: string[],
   rng: RNG,
-): { word: string; category: string } {
+): { word: string; category: string; bagExhausted: boolean } {
   const resolvedPacks = packIds.includes('__mixed__') ? ALL_PACK_IDS : packIds;
-  const entries: WordEntry[] = getAllEntries(resolvedPacks);
+  const allEntries: WordEntry[] = getAllEntries(resolvedPacks);
 
-  if (entries.length === 0) {
+  if (allEntries.length === 0) {
     throw new Error('No entries found for the selected packs');
   }
 
-  const idx = Math.floor(rng() * entries.length);
-  const entry = entries[idx];
-  return { word: entry.word, category: entry.category };
+  const usedSet = new Set(usedWords.map((w) => w.toLowerCase()));
+  let available = allEntries.filter((e) => !usedSet.has(e.word.toLowerCase()));
+  let bagExhausted = false;
+
+  if (available.length === 0) {
+    available = allEntries;
+    bagExhausted = true;
+  }
+
+  const idx = Math.floor(rng() * available.length);
+  const entry = available[idx];
+  return { word: entry.word, category: entry.category, bagExhausted };
 }
 
 /**
@@ -62,21 +73,28 @@ export function pickSecret(
  */
 export function generateHint(word: string, rng: RNG): string {
   const hints: string[] = [];
+  const letterOnly = word.replace(/[^a-zA-Z]/g, '');
+  const wordParts = word.trim().split(/\s+/);
 
-  hints.push(`Starts with "${word.charAt(0).toUpperCase()}"`);
-  hints.push(`Ends with "${word.charAt(word.length - 1).toUpperCase()}"`);
-  hints.push(`${word.length} letters long`);
+  hints.push(`${letterOnly.length} letters`);
 
-  const uniqueLetters = new Set(word.toLowerCase().replace(/[^a-z]/g, ''));
-  if (uniqueLetters.size > 2) {
-    const letters = Array.from(uniqueLetters);
-    const mid = letters[Math.floor(rng() * letters.length)];
-    hints.push(`Contains the letter "${mid.toUpperCase()}"`);
+  if (wordParts.length > 1) {
+    hints.push(`${wordParts.length} words`);
   }
 
-  const words = word.trim().split(/\s+/);
-  if (words.length > 1) {
-    hints.push(`${words.length} words`);
+  const vowels = letterOnly.toLowerCase().match(/[aeiou]/g);
+  if (vowels) {
+    hints.push(`${vowels.length} vowels`);
+  }
+
+  if (letterOnly.length >= 6) {
+    const half = Math.ceil(letterOnly.length / 2);
+    hints.push(`Second half starts with "${letterOnly.charAt(half).toUpperCase()}"`);
+  }
+
+  const uniqueLetters = new Set(letterOnly.toLowerCase());
+  if (uniqueLetters.size !== letterOnly.length) {
+    hints.push('Has a repeated letter');
   }
 
   const idx = Math.floor(rng() * hints.length);

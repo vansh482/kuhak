@@ -46,6 +46,10 @@ interface GameStore {
   deleteGroup: (id: string) => void;
   loadGroup: (group: SavedGroup) => void;
 
+  usedWords: string[];
+  markWordUsed: (word: string) => void;
+  resetUsedWords: () => void;
+
   playerStats: Record<string, PlayerStats>;
   recordRoundStats: (players: Player[], imposterIds: string[], outcome: RoundOutcome) => void;
 
@@ -146,6 +150,11 @@ export const useGameStore = create<GameStore>()(
           scores: {},
         }),
 
+      usedWords: [],
+      markWordUsed: (word) =>
+        set((s) => ({ usedWords: [...s.usedWords, word.toLowerCase()] })),
+      resetUsedWords: () => set({ usedWords: [] }),
+
       playerStats: {},
       recordRoundStats: (players, imposterIds, outcome) =>
         set((s) => {
@@ -179,6 +188,7 @@ export const useGameStore = create<GameStore>()(
           hapticsEnabled: true,
           activeGroupId: null,
           savedGroups: [],
+          usedWords: [],
           playerStats: {},
         }),
     }),
@@ -195,6 +205,7 @@ export const useGameStore = create<GameStore>()(
         soundEnabled: state.soundEnabled,
         hapticsEnabled: state.hapticsEnabled,
         savedGroups: state.savedGroups,
+        usedWords: state.usedWords,
         playerStats: state.playerStats,
       }),
     }

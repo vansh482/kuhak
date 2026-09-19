@@ -93,6 +93,9 @@ export default function SetupScreen() {
     setTimerSeconds,
     imposterHint,
     setCurrentRound,
+    usedWords,
+    markWordUsed,
+    resetUsedWords,
   } = useGameStore();
 
   const playerCount = roster.length;
@@ -129,7 +132,10 @@ export default function SetupScreen() {
 
   const dealRound = () => {
     const imposterIds = dealRoles(roster, 1, Math.random);
-    const secret = pickSecret(selectedPacks, Math.random);
+    const { word, category, bagExhausted } = pickSecret(selectedPacks, usedWords, Math.random);
+    if (bagExhausted) resetUsedWords();
+    markWordUsed(word);
+    const secret = { word, category };
     const startSeat = Math.floor(Math.random() * roster.length);
 
     const hintText =
