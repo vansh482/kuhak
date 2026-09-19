@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
@@ -10,10 +10,11 @@ import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
 import { PACKS, ALL_PACK_IDS } from '../src/content';
-import { maxImposters, dealRoles, pickSecret } from '../src/game/logic';
+import { dealRoles, pickSecret, generateHint } from '../src/game/logic';
 import type { DealtRound } from '../src/game/types';
 
 const TIMER_OPTIONS = [
+  { seconds: 0, label: 'None' },
   { seconds: 60, label: '1m' },
   { seconds: 120, label: '2m' },
   { seconds: 180, label: '3m' },
@@ -45,56 +46,6 @@ function NavBar() {
       </Animated.View>
       <Text style={styles.navTitle}>{t('setup.title')}</Text>
       <View style={styles.navSpacer} />
-    </View>
-  );
-}
-
-function Stepper({
-  value,
-  min,
-  max,
-  onDecrement,
-  onIncrement,
-}: {
-  value: number;
-  min: number;
-  max: number;
-  onDecrement: () => void;
-  onIncrement: () => void;
-}) {
-  return (
-    <View style={styles.stepper}>
-      <Pressable
-        onPress={onDecrement}
-        disabled={value <= min}
-        style={[styles.stepperBtn, value <= min && styles.stepperBtnDisabled]}
-      >
-        <Text
-          style={[
-            styles.stepperBtnText,
-            value <= min && styles.stepperBtnTextDisabled,
-          ]}
-        >
-          −
-        </Text>
-      </Pressable>
-      <View style={styles.stepperValue}>
-        <Text style={styles.stepperValueText}>{value}</Text>
-      </View>
-      <Pressable
-        onPress={onIncrement}
-        disabled={value >= max}
-        style={[styles.stepperBtn, value >= max && styles.stepperBtnDisabled]}
-      >
-        <Text
-          style={[
-            styles.stepperBtnText,
-            value >= max && styles.stepperBtnTextDisabled,
-          ]}
-        >
-          +
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -136,22 +87,15 @@ export default function SetupScreen() {
   const insets = useSafeAreaInsets();
   const {
     roster,
-    imposterCount,
-    setImposterCount,
     selectedPacks,
     setSelectedPacks,
     timerSeconds,
     setTimerSeconds,
     imposterHint,
-    setImposterHint,
     setCurrentRound,
   } = useGameStore();
 
   const playerCount = roster.length;
-  const maxImp = maxImposters(playerCount);
-
-  // Clamp imposter count when it exceeds max for current player count
-  const clampedImposters = Math.min(imposterCount, maxImp);
 
   const allPackIds = ALL_PACK_IDS;
   const allSelected = allPackIds.every((id) => selectedPacks.includes(id));
@@ -183,26 +127,27 @@ export default function SetupScreen() {
     }
   };
 
-  const hintEnabled = imposterHint !== 'none';
-  const toggleHint = () => {
-    setImposterHint(hintEnabled ? 'none' : 'category');
-  };
-
   const dealRound = () => {
-    const imposterIds = dealRoles(roster, clampedImposters, Math.random);
+    const imposterIds = dealRoles(roster, 1, Math.random);
     const secret = pickSecret(selectedPacks, Math.random);
     const startSeat = Math.floor(Math.random() * roster.length);
+
+    const hintText =
+      imposterHint === 'category_hint'
+        ? generateHint(secret.word, Math.random)
+        : null;
 
     const round: DealtRound = {
       config: {
         players: roster,
-        imposterCount: clampedImposters,
+        imposterCount: 1,
         packIds: selectedPacks,
         timerSeconds,
         imposterHint,
       },
       imposterIds,
       secret,
+      imposterHintText: hintText,
       startSeat,
     };
 
@@ -228,22 +173,6 @@ export default function SetupScreen() {
               {t('setup.players', { count: playerCount })}
             </Text>
           </View>
-        </View>
-
-        {/* Imposter count stepper */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('setup.imposters')}</Text>
-          <Stepper
-            value={clampedImposters}
-            min={1}
-            max={maxImp}
-            onDecrement={() =>
-              setImposterCount(Math.max(1, clampedImposters - 1))
-            }
-            onIncrement={() =>
-              setImposterCount(Math.min(maxImp, clampedImposters + 1))
-            }
-          />
         </View>
 
         {/* Word packs */}
@@ -318,20 +247,6 @@ export default function SetupScreen() {
           </View>
         </View>
 
-        {/* Imposter hint toggle */}
-        <View style={styles.section}>
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>
-              {t('setup.imposterGetsCategory')}
-            </Text>
-            <Switch
-              value={hintEnabled}
-              onValueChange={toggleHint}
-              trackColor={{ false: color.surface, true: color.amberSoft }}
-              thumbColor={hintEnabled ? color.amber : color.text3}
-            />
-          </View>
-        </View>
       </ScrollView>
 
       {/* Deal button */}
@@ -432,42 +347,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.small,
     color: color.amber,
   },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.md,
-  },
-  stepperBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
-    backgroundColor: color.surfaceHover,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperBtnDisabled: {
-    opacity: 0.3,
-  },
-  stepperBtnText: {
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  stepperBtnTextDisabled: {
-    color: color.text3,
-  },
-  stepperValue: {
-    width: 48,
-    alignItems: 'center',
-  },
-  stepperValueText: {
-    fontFamily: font.display,
-    fontSize: fontSize.h1,
-    color: color.amber,
-  },
   packGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -524,19 +403,6 @@ const styles = StyleSheet.create({
   },
   timerChipTextActive: {
     color: color.amber,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: space.xs,
-  },
-  toggleLabel: {
-    fontFamily: font.bodyMedium,
-    fontSize: fontSize.body,
-    color: color.text,
-    flex: 1,
-    marginRight: space.md,
   },
   bottomBar: {
     paddingHorizontal: space.lg,

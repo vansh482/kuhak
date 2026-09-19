@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Player, DealtRound, RoundOutcome, ImposterHint } from '../game/types';
+import type { Player, DealtRound, RoundOutcome, ImposterHint, SavedGroup, PlayerStats } from '../game/types';
 
 interface GameStore {
   roster: Player[];
   setRoster: (roster: Player[]) => void;
   addPlayer: (name: string) => void;
   removePlayer: (id: string) => void;
+  renamePlayer: (id: string, name: string) => void;
 
   selectedPacks: string[];
   setSelectedPacks: (packs: string[]) => void;
@@ -38,6 +39,16 @@ interface GameStore {
   hapticsEnabled: boolean;
   setHapticsEnabled: (enabled: boolean) => void;
 
+  activeGroupId: string | null;
+  savedGroups: SavedGroup[];
+  saveCurrentGroup: (name: string) => void;
+  updateGroup: (id: string) => void;
+  deleteGroup: (id: string) => void;
+  loadGroup: (group: SavedGroup) => void;
+
+  playerStats: Record<string, PlayerStats>;
+  recordRoundStats: (players: Player[], imposterIds: string[], outcome: RoundOutcome) => void;
+
   resetAll: () => void;
 }
 
@@ -60,6 +71,10 @@ export const useGameStore = create<GameStore>()(
           roster: s.roster
             .filter((p) => p.id !== id)
             .map((p, i) => ({ ...p, seat: i })),
+        })),
+      renamePlayer: (id, name) =>
+        set((s) => ({
+          roster: s.roster.map((p) => (p.id === id ? { ...p, name } : p)),
         })),
 
       selectedPacks: ['bollywood', 'food', 'cricket'],
@@ -97,6 +112,59 @@ export const useGameStore = create<GameStore>()(
       hapticsEnabled: true,
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
 
+      activeGroupId: null,
+      savedGroups: [],
+      saveCurrentGroup: (name) =>
+        set((s) => {
+          const group: SavedGroup = {
+            id: `grp_${Date.now()}`,
+            name,
+            playerNames: s.roster.map((p) => p.name),
+            createdAt: Date.now(),
+          };
+          return { savedGroups: [...s.savedGroups, group], activeGroupId: group.id };
+        }),
+      updateGroup: (id) =>
+        set((s) => ({
+          savedGroups: s.savedGroups.map((g) =>
+            g.id === id ? { ...g, playerNames: s.roster.map((p) => p.name) } : g,
+          ),
+        })),
+      deleteGroup: (id) =>
+        set((s) => ({
+          savedGroups: s.savedGroups.filter((g) => g.id !== id),
+          activeGroupId: s.activeGroupId === id ? null : s.activeGroupId,
+        })),
+      loadGroup: (group) =>
+        set({
+          roster: group.playerNames.map((name, i) => ({
+            id: `p_${Date.now()}_${i}`,
+            name,
+            seat: i,
+          })),
+          activeGroupId: group.id,
+          scores: {},
+        }),
+
+      playerStats: {},
+      recordRoundStats: (players, imposterIds, outcome) =>
+        set((s) => {
+          const next = { ...s.playerStats };
+          for (const p of players) {
+            const key = p.name.toLowerCase();
+            const prev = next[key] || { roundsPlayed: 0, timesImposter: 0, timesCaught: 0, timesWalkedFree: 0, totalScore: 0 };
+            const wasImposter = imposterIds.includes(p.id);
+            next[key] = {
+              roundsPlayed: prev.roundsPlayed + 1,
+              timesImposter: prev.timesImposter + (wasImposter ? 1 : 0),
+              timesCaught: prev.timesCaught + (wasImposter && outcome.wasCaught ? 1 : 0),
+              timesWalkedFree: prev.timesWalkedFree + (wasImposter && !outcome.wasCaught ? 1 : 0),
+              totalScore: prev.totalScore + (outcome.points[p.id] || 0),
+            };
+          }
+          return { playerStats: next };
+        }),
+
       resetAll: () =>
         set({
           roster: [],
@@ -109,6 +177,9 @@ export const useGameStore = create<GameStore>()(
           scores: {},
           soundEnabled: true,
           hapticsEnabled: true,
+          activeGroupId: null,
+          savedGroups: [],
+          playerStats: {},
         }),
     }),
     {
@@ -123,6 +194,8 @@ export const useGameStore = create<GameStore>()(
         scores: state.scores,
         soundEnabled: state.soundEnabled,
         hapticsEnabled: state.hapticsEnabled,
+        savedGroups: state.savedGroups,
+        playerStats: state.playerStats,
       }),
     }
   )

@@ -39,6 +39,7 @@ export default function PlayScreen() {
   const hapticsEnabled = useGameStore((s) => s.hapticsEnabled);
   const addRoundScores = useGameStore((s) => s.addRoundScores);
   const setLastOutcome = useGameStore((s) => s.setLastOutcome);
+  const recordRoundStats = useGameStore((s) => s.recordRoundStats);
 
   const [phase, setPhase] = useState<GamePhase>('deal');
   const [votedOutId, setVotedOutId] = useState<PlayerId | null>(null);
@@ -73,7 +74,7 @@ export default function PlayScreen() {
     );
   }
 
-  const { config, imposterIds, secret, startSeat } = currentRound;
+  const { config, imposterIds, secret, imposterHintText, startSeat } = currentRound;
   const players = config.players;
   const orderedPlayers = clueOrder(players, startSeat);
 
@@ -88,7 +89,6 @@ export default function PlayScreen() {
   ) => {
     const outcome = resolveVote(votedId, imposterIds, guessCorrect);
 
-    // Distribute crew points for crew-won scenarios
     if (outcome.crewWon) {
       const crewPoints: Record<PlayerId, number> = {};
       for (const p of players) {
@@ -96,14 +96,15 @@ export default function PlayScreen() {
           crewPoints[p.id] = 2;
         }
       }
-      // Merge crew points into outcome
       const mergedPoints = { ...outcome.points, ...crewPoints };
       const mergedOutcome = { ...outcome, points: mergedPoints };
       addRoundScores(mergedOutcome);
       setLastOutcome(mergedOutcome);
+      recordRoundStats(players, imposterIds, mergedOutcome);
     } else {
       addRoundScores(outcome);
       setLastOutcome(outcome);
+      recordRoundStats(players, imposterIds, outcome);
     }
 
     router.replace('/result');
@@ -117,6 +118,7 @@ export default function PlayScreen() {
           imposterIds={imposterIds}
           secret={secret}
           imposterHint={config.imposterHint}
+          imposterHintText={imposterHintText}
           hapticsEnabled={hapticsEnabled}
           onComplete={() => {
             setTimerRemaining(config.timerSeconds);
@@ -170,6 +172,7 @@ interface DealPhaseProps {
   imposterIds: PlayerId[];
   secret: { word: string; category: string };
   imposterHint: string;
+  imposterHintText: string | null;
   hapticsEnabled: boolean;
   onComplete: () => void;
 }
@@ -179,38 +182,27 @@ function DealPhase({
   imposterIds,
   secret,
   imposterHint,
+  imposterHintText,
   hapticsEnabled,
   onComplete,
 }: DealPhaseProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [isRevealed, setIsRevealed] = useState(false);
+  const [hasSeenCard, setHasSeenCard] = useState(false);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Card flip animation
   const flipProgress = useSharedValue(0);
-  // Hold progress bar
   const holdProgress = useSharedValue(0);
 
   const player = players[currentIdx];
   const isImposter = imposterIds.includes(player?.id ?? '');
 
-  const frontStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(flipProgress.value, [0, 1], [0, 180]);
-    return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden' as const,
-      opacity: flipProgress.value < 0.5 ? 1 : 0,
-    };
-  });
+  const frontStyle = useAnimatedStyle(() => ({
+    opacity: flipProgress.value < 0.5 ? 1 : 0,
+  }));
 
-  const backStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(flipProgress.value, [0, 1], [180, 360]);
-    return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden' as const,
-      opacity: flipProgress.value >= 0.5 ? 1 : 0,
-    };
-  });
+  const backStyle = useAnimatedStyle(() => ({
+    opacity: flipProgress.value >= 0.5 ? 1 : 0,
+  }));
 
   const progressBarStyle = useAnimatedStyle(() => ({
     width: `${holdProgress.value * 100}%`,
@@ -223,7 +215,7 @@ function DealPhase({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       flipProgress.value = withTiming(1, { duration: 220 });
-      setIsRevealed(true);
+      setHasSeenCard(true);
     }, 400);
   };
 
@@ -233,17 +225,16 @@ function DealPhase({
       holdTimerRef.current = null;
     }
     holdProgress.value = withTiming(0, { duration: 150 });
+    flipProgress.value = withTiming(0, { duration: 180 });
+  };
 
-    if (isRevealed) {
-      flipProgress.value = withTiming(0, { duration: 180 });
-      setIsRevealed(false);
-
-      const nextIdx = currentIdx + 1;
-      if (nextIdx >= players.length) {
-        setTimeout(onComplete, 250);
-      } else {
-        setTimeout(() => setCurrentIdx(nextIdx), 250);
-      }
+  const handleNext = () => {
+    setHasSeenCard(false);
+    const nextIdx = currentIdx + 1;
+    if (nextIdx >= players.length) {
+      onComplete();
+    } else {
+      setCurrentIdx(nextIdx);
     }
   };
 
@@ -269,7 +260,6 @@ function DealPhase({
           <Text style={styles.holdHint}>
             {t('play.holdToReveal')}
           </Text>
-          {/* Hold progress bar */}
           <View style={styles.progressTrack}>
             <Animated.View style={[styles.progressFill, progressBarStyle]} />
           </View>
@@ -289,9 +279,14 @@ function DealPhase({
               <Text style={styles.imposterLabel}>
                 {t('play.youreTheImposter')}
               </Text>
-              {imposterHint !== 'none' && (
+              {(imposterHint === 'category' || imposterHint === 'category_hint') && (
                 <Text style={styles.hintText}>
                   {t('play.category', { name: secret.category })}
+                </Text>
+              )}
+              {imposterHint === 'category_hint' && imposterHintText && (
+                <Text style={styles.hintText}>
+                  {imposterHintText}
                 </Text>
               )}
             </View>
@@ -302,6 +297,14 @@ function DealPhase({
           )}
         </Animated.View>
       </Pressable>
+
+      {hasSeenCard && (
+        <Pressable onPress={handleNext} style={styles.nextCardBtn}>
+          <Text style={styles.nextCardBtnText}>
+            {currentIdx + 1 < players.length ? 'Pass to next player' : 'Start discussion'}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -328,31 +331,43 @@ function DiscussPhase({
   const [currentClueIdx, setCurrentClueIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const noTimer = remaining === 0;
+  const [elapsed, setElapsed] = useState(0);
+
   useEffect(() => {
-    if (paused || localRemaining <= 0) {
+    if (paused) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
 
-    intervalRef.current = setInterval(() => {
-      setLocalRemaining((prev) => {
-        const next = prev - 1;
-        onTick(next);
-        if (next <= 0) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        }
-        return next;
-      });
-    }, 1000);
+    if (noTimer) {
+      intervalRef.current = setInterval(() => {
+        setElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (localRemaining <= 0) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
+      }
+      intervalRef.current = setInterval(() => {
+        setLocalRemaining((prev) => {
+          const next = prev - 1;
+          onTick(next);
+          if (next <= 0) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+          }
+          return next;
+        });
+      }, 1000);
+    }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [paused, localRemaining > 0]);
+  }, [paused, noTimer, localRemaining > 0]);
 
-  // Triple haptic burst at 0:00
   useEffect(() => {
-    if (localRemaining === 0) {
+    if (!noTimer && localRemaining === 0) {
       if (hapticsEnabled) {
         const fireHaptics = async () => {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -371,8 +386,9 @@ function DiscussPhase({
     }
   }, [localRemaining]);
 
-  const minutes = Math.floor(localRemaining / 60);
-  const seconds = localRemaining % 60;
+  const displaySeconds = noTimer ? elapsed : localRemaining;
+  const minutes = Math.floor(displaySeconds / 60);
+  const seconds = displaySeconds % 60;
   const timerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
   return (
@@ -382,7 +398,7 @@ function DiscussPhase({
       <Text
         style={[
           styles.timer,
-          localRemaining <= 10 && localRemaining > 0 && styles.timerUrgent,
+          !noTimer && localRemaining <= 10 && localRemaining > 0 && styles.timerUrgent,
         ]}
       >
         {timerText}
@@ -675,6 +691,21 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: color.amber,
     borderRadius: 2,
+  },
+  nextCardBtn: {
+    marginTop: space.xl,
+    paddingVertical: 14,
+    paddingHorizontal: space.xl,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.border,
+  },
+  nextCardBtnText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: color.text,
+    textAlign: 'center',
   },
   cardContent: {
     alignItems: 'center',

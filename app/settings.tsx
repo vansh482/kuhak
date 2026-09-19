@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Switch, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Switch, Alert, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -128,14 +128,24 @@ export default function SettingsScreen() {
   }));
 
   const handleReset = () => {
-    Alert.alert(t('settings.resetAll'), t('settings.resetConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.confirm'),
-        style: 'destructive',
-        onPress: () => resetAll(),
-      },
-    ]);
+    if (Platform.OS === 'web') {
+      if (window.confirm(t('settings.resetConfirm'))) {
+        resetAll();
+        router.replace('/');
+      }
+    } else {
+      Alert.alert(t('settings.resetAll'), t('settings.resetConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          style: 'destructive',
+          onPress: () => {
+            resetAll();
+            router.replace('/');
+          },
+        },
+      ]);
+    }
   };
 
   return (

@@ -101,6 +101,10 @@ export default function HomeScreen() {
             onPress={() => router.push('/rules')}
           />
           <TextLink
+            label={t('home.stats')}
+            onPress={() => router.push('/stats')}
+          />
+          <TextLink
             label={t('home.settings')}
             onPress={() => router.push('/settings')}
           />

@@ -57,6 +57,33 @@ export function pickSecret(
 }
 
 /**
+ * Generates a random hint about the secret word for the imposter.
+ * Picks from several hint types so it's not always the same.
+ */
+export function generateHint(word: string, rng: RNG): string {
+  const hints: string[] = [];
+
+  hints.push(`Starts with "${word.charAt(0).toUpperCase()}"`);
+  hints.push(`Ends with "${word.charAt(word.length - 1).toUpperCase()}"`);
+  hints.push(`${word.length} letters long`);
+
+  const uniqueLetters = new Set(word.toLowerCase().replace(/[^a-z]/g, ''));
+  if (uniqueLetters.size > 2) {
+    const letters = Array.from(uniqueLetters);
+    const mid = letters[Math.floor(rng() * letters.length)];
+    hints.push(`Contains the letter "${mid.toUpperCase()}"`);
+  }
+
+  const words = word.trim().split(/\s+/);
+  if (words.length > 1) {
+    hints.push(`${words.length} words`);
+  }
+
+  const idx = Math.floor(rng() * hints.length);
+  return hints[idx];
+}
+
+/**
  * Returns every player exactly once in clue-giving order,
  * starting from the player at `startSeat` and wrapping around.
  */

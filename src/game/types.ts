@@ -22,6 +22,7 @@ export interface DealtRound {
   config: RoundConfig;
   imposterIds: PlayerId[];
   secret: { word: string; category: string };
+  imposterHintText: string | null;
   startSeat: number;
 }
 
@@ -34,6 +35,21 @@ export interface RoundOutcome {
 }
 
 export type GamePhase = 'deal' | 'discuss' | 'vote' | 'guess';
+
+export interface PlayerStats {
+  roundsPlayed: number;
+  timesImposter: number;
+  timesCaught: number;
+  timesWalkedFree: number;
+  totalScore: number;
+}
+
+export interface SavedGroup {
+  id: string;
+  name: string;
+  playerNames: string[];
+  createdAt: number;
+}
 
 export interface WordPack {
   id: string;
