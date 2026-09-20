@@ -8,7 +8,7 @@ export interface Player {
 
 export type RNG = () => number;
 
-export type ImposterHint = 'none' | 'category' | 'category_hint';
+export type ImposterHint = 'none' | 'category' | 'hint_only' | 'category_hint';
 
 export interface RoundConfig {
   players: Player[];
@@ -22,7 +22,7 @@ export interface DealtRound {
   config: RoundConfig;
   imposterIds: PlayerId[];
   secret: { word: string; category: string };
-  decoyWords: string[] | null;
+  imposterHint: string | null;
   startSeat: number;
 }
 
@@ -60,4 +60,5 @@ export interface WordPack {
 export interface WordEntry {
   word: string;
   category: string;
+  hints: string[];
 }

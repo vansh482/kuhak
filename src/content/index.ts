@@ -8,6 +8,8 @@ import { desiPack } from './desi';
 import { festivalsPack } from './festivals';
 import { screenPack } from './screen';
 import { asiaPack } from './asia';
+import { musicPack } from './music';
+import { mythologyPack } from './mythology';
 
 export const PACKS: WordPack[] = [
   bollywoodPack,
@@ -18,6 +20,8 @@ export const PACKS: WordPack[] = [
   festivalsPack,
   screenPack,
   asiaPack,
+  musicPack,
+  mythologyPack,
 ];
 
 export const ALL_PACK_IDS: string[] = PACKS.map((p) => p.id);

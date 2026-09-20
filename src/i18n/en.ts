@@ -85,6 +85,7 @@ export const en = {
     imposterHint: 'Imposter hint',
     hintNone: 'None',
     hintCategory: 'Category',
+    hintHintOnly: 'Hint only',
     hintCategoryHint: 'Category + hint',
     resetAll: 'Reset all data',
     resetConfirm:

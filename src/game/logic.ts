@@ -68,26 +68,13 @@ export function pickSecret(
 }
 
 /**
- * Builds a decoy set: n words from the same pack pool, one of which
- * is the real secret. Gives the imposter a semantic field to bluff
- * from rather than structural puzzle clues.
- *
- * Difficulty is just n: Easy 3, Normal 5, Hard 8.
+ * Picks a random hint from the word entry's hints array.
+ * Returns null if the entry has no hints.
  */
-export function decoySet(
-  secret: string,
-  pool: WordEntry[],
-  n: number,
-  rng: RNG,
-): string[] {
-  const others = pool
-    .filter((e) => e.word.toLowerCase() !== secret.toLowerCase())
-    .map((e) => e.word);
-  shuffle(others, rng);
-  const decoys = others.slice(0, n - 1);
-  const result = [secret, ...decoys];
-  shuffle(result, rng);
-  return result;
+export function pickHint(entry: WordEntry, rng: RNG): string | null {
+  if (!entry.hints || entry.hints.length === 0) return null;
+  const idx = Math.floor(rng() * entry.hints.length);
+  return entry.hints[idx];
 }
 
 /**

@@ -74,7 +74,7 @@ export default function PlayScreen() {
     );
   }
 
-  const { config, imposterIds, secret, decoyWords, startSeat } = currentRound;
+  const { config, imposterIds, secret, imposterHint: hintText, startSeat } = currentRound;
   const players = config.players;
   const orderedPlayers = clueOrder(players, startSeat);
 
@@ -118,7 +118,7 @@ export default function PlayScreen() {
           imposterIds={imposterIds}
           secret={secret}
           imposterHint={config.imposterHint}
-          decoyWords={decoyWords}
+          hintText={hintText}
           hapticsEnabled={hapticsEnabled}
           onComplete={() => {
             setTimerRemaining(config.timerSeconds);
@@ -172,7 +172,7 @@ interface DealPhaseProps {
   imposterIds: PlayerId[];
   secret: { word: string; category: string };
   imposterHint: string;
-  decoyWords: string[] | null;
+  hintText: string | null;
   hapticsEnabled: boolean;
   onComplete: () => void;
 }
@@ -182,7 +182,7 @@ function DealPhase({
   imposterIds,
   secret,
   imposterHint,
-  decoyWords,
+  hintText,
   hapticsEnabled,
   onComplete,
 }: DealPhaseProps) {
@@ -284,12 +284,8 @@ function DealPhase({
                   {t('play.category', { name: secret.category })}
                 </Text>
               )}
-              {decoyWords && decoyWords.length > 0 && (
-                <View style={styles.decoyList}>
-                  {decoyWords.map((w, i) => (
-                    <Text key={i} style={styles.decoyWord}>{w}</Text>
-                  ))}
-                </View>
+              {hintText && (
+                <Text style={styles.hintWord}>{hintText}</Text>
               )}
             </View>
           ) : (
@@ -732,15 +728,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
   },
-  decoyList: {
+  hintWord: {
     marginTop: space.md,
-    gap: space.xs,
-    alignItems: 'center',
-  },
-  decoyWord: {
-    fontFamily: font.headingSemi,
-    fontSize: fontSize.body,
-    color: 'rgba(255,255,255,0.9)',
+    fontFamily: font.display,
+    fontSize: fontSize.h2,
+    color: 'rgba(255,255,255,0.95)',
     textAlign: 'center',
   },
 

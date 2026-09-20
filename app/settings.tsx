@@ -24,6 +24,7 @@ const TIMER_OPTIONS = [
 const HINT_OPTIONS: { label: string; value: ImposterHint }[] = [
   { label: t('settings.hintNone'), value: 'none' },
   { label: t('settings.hintCategory'), value: 'category' },
+  { label: t('settings.hintHintOnly'), value: 'hint_only' },
   { label: t('settings.hintCategoryHint'), value: 'category_hint' },
 ];
 

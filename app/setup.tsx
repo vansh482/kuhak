@@ -10,7 +10,7 @@ import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
 import { PACKS, ALL_PACK_IDS, getAllEntries } from '../src/content';
-import { dealRoles, pickSecret, decoySet } from '../src/game/logic';
+import { dealRoles, pickSecret, pickHint } from '../src/game/logic';
 import type { DealtRound } from '../src/game/types';
 
 const TIMER_OPTIONS = [
@@ -140,9 +140,10 @@ export default function SetupScreen() {
 
     const resolvedPacks = selectedPacks.includes('__mixed__') ? ALL_PACK_IDS : selectedPacks;
     const pool = getAllEntries(resolvedPacks);
-    const decoys =
-      imposterHint === 'category_hint'
-        ? decoySet(word, pool, 5, Math.random)
+    const entry = pool.find((e) => e.word === word);
+    const hint =
+      (imposterHint === 'category_hint' || imposterHint === 'hint_only') && entry
+        ? pickHint(entry, Math.random)
         : null;
 
     const round: DealtRound = {
@@ -155,7 +156,7 @@ export default function SetupScreen() {
       },
       imposterIds,
       secret,
-      decoyWords: decoys,
+      imposterHint: hint,
       startSeat,
     };
 

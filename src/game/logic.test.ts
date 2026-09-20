@@ -1,23 +1,22 @@
 import type { Player, RNG, WordEntry } from './types';
-import { dealRoles, maxImposters, pickSecret, decoySet, clueOrder, resolveVote } from './logic';
-import { getAllEntries } from '../content';
+import { dealRoles, maxImposters, pickSecret, pickHint, clueOrder, resolveVote } from './logic';
 
 // ---------------------------------------------------------------------------
 // Mock the content module (not yet built by another agent)
 // ---------------------------------------------------------------------------
 jest.mock('../content', () => {
-  const entries: Record<string, Array<{ word: string; category: string }>> = {
+  const entries: Record<string, Array<{ word: string; category: string; hints: string[] }>> = {
     animals: [
-      { word: 'Tiger', category: 'Animals' },
-      { word: 'Elephant', category: 'Animals' },
-      { word: 'Peacock', category: 'Animals' },
+      { word: 'Tiger', category: 'Animals', hints: ['Stripes', 'Jungle', 'Roar', 'Bengal', 'Predator'] },
+      { word: 'Elephant', category: 'Animals', hints: ['Trunk', 'Tusks', 'Safari', 'Jumbo', 'Hathi'] },
+      { word: 'Peacock', category: 'Animals', hints: ['Feathers', 'Dance', 'National Bird', 'Mor', 'Rain'] },
     ],
     food: [
-      { word: 'Biryani', category: 'Food' },
-      { word: 'Dosa', category: 'Food' },
+      { word: 'Biryani', category: 'Food', hints: ['Rice', 'Dum', 'Hyderabad', 'Spices', 'Raita'] },
+      { word: 'Dosa', category: 'Food', hints: ['Batter', 'Crispy', 'South Indian', 'Chutney', 'Sambhar'] },
     ],
     sports: [
-      { word: 'Cricket', category: 'Sports' },
+      { word: 'Cricket', category: 'Sports', hints: ['Bat', 'Wicket', 'Boundary', 'Over', 'Pitch'] },
     ],
   };
   return {
@@ -198,40 +197,35 @@ describe('pickSecret', () => {
 });
 
 // ===========================================================================
-// decoySet
+// pickHint
 // ===========================================================================
-describe('decoySet', () => {
-  const pool = getAllEntries(['animals', 'food']);
-
-  it('always includes the secret word', () => {
-    const result = decoySet('Tiger', pool, 5, mulberry32(42));
-    expect(result).toContain('Tiger');
+describe('pickHint', () => {
+  it('returns a hint from the entry hints array', () => {
+    const entry = { word: 'Tiger', category: 'Animals', hints: ['Stripes', 'Jungle', 'Roar', 'Bengal', 'Predator'] };
+    const hint = pickHint(entry, mulberry32(42));
+    expect(entry.hints).toContain(hint);
   });
 
-  it('returns exactly n words', () => {
-    expect(decoySet('Tiger', pool, 5, mulberry32(1))).toHaveLength(5);
-    expect(decoySet('Tiger', pool, 3, mulberry32(2))).toHaveLength(3);
+  it('returns null for empty hints', () => {
+    const entry = { word: 'Tiger', category: 'Animals', hints: [] };
+    expect(pickHint(entry, mulberry32(1))).toBeNull();
   });
 
-  it('shuffles so secret is not always first', () => {
-    let timesFirst = 0;
+  it('distributes across all hints over many picks', () => {
+    const entry = { word: 'Tiger', category: 'Animals', hints: ['Stripes', 'Jungle', 'Roar', 'Bengal', 'Predator'] };
+    const seen = new Set<string>();
     for (let i = 0; i < 100; i++) {
-      const result = decoySet('Tiger', pool, 5, mulberry32(i));
-      if (result[0] === 'Tiger') timesFirst++;
+      const hint = pickHint(entry, mulberry32(i));
+      if (hint) seen.add(hint);
     }
-    expect(timesFirst).toBeLessThan(80);
+    expect(seen.size).toBe(5);
   });
 
-  it('caps at pool size when n exceeds available words', () => {
-    const smallPool = getAllEntries(['animals']);
-    const result = decoySet('Tiger', smallPool, 5, mulberry32(1));
-    expect(result).toHaveLength(3);
-  });
-
-  it('never contains duplicates', () => {
-    for (let i = 0; i < 50; i++) {
-      const result = decoySet('Tiger', pool, 5, mulberry32(i));
-      expect(new Set(result).size).toBe(result.length);
+  it('never returns the secret word itself', () => {
+    const entry = { word: 'Tiger', category: 'Animals', hints: ['Stripes', 'Jungle', 'Roar', 'Bengal', 'Predator'] };
+    for (let i = 0; i < 100; i++) {
+      const hint = pickHint(entry, mulberry32(i));
+      expect(hint).not.toBe('Tiger');
     }
   });
 });

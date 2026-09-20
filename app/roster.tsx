@@ -195,18 +195,25 @@ export default function RosterScreen() {
   const { roster, addPlayer, removePlayer, renamePlayer, setRoster, activeGroupId, savedGroups, saveCurrentGroup, updateGroup, deleteGroup, loadGroup } = useGameStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [isNaming, setIsNaming] = useState(false);
+  const [groupNameInput, setGroupNameInput] = useState('');
   const inputRef = useRef<TextInput>(null);
+  const groupInputRef = useRef<TextInput>(null);
+  const isSubmittingRef = useRef(false);
 
   const canContinue = roster.length >= MIN_PLAYERS;
   const canAdd = roster.length < MAX_PLAYERS;
 
   const handleAddPlayer = () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     const trimmed = newName.trim();
     if (trimmed) {
       addPlayer(trimmed);
       setNewName('');
     }
     setIsAdding(false);
+    setTimeout(() => { isSubmittingRef.current = false; }, 100);
   };
 
   const handleUseNumbers = () => {
@@ -234,17 +241,20 @@ export default function RosterScreen() {
         window.alert(`Group "${name.trim()}" saved!`);
       }
     } else {
-      Alert.prompt?.(
-        t('roster.saveGroup'),
-        t('roster.groupNamePrompt'),
-        (name: string) => {
-          if (name?.trim()) {
-            saveCurrentGroup(name.trim());
-            Alert.alert(`Group "${name.trim()}" saved!`);
-          }
-        },
-      );
+      setGroupNameInput('');
+      setIsNaming(true);
+      setTimeout(() => groupInputRef.current?.focus(), 100);
     }
+  };
+
+  const handleConfirmGroupName = () => {
+    const trimmed = groupNameInput.trim();
+    if (trimmed) {
+      saveCurrentGroup(trimmed);
+      Alert.alert(`Group "${trimmed}" saved!`);
+    }
+    setIsNaming(false);
+    setGroupNameInput('');
   };
 
   const handleDeleteGroup = (id: string, name: string) => {
@@ -371,10 +381,30 @@ export default function RosterScreen() {
                 }}
               />
             )}
-            <SecondaryButton
-              label={t('roster.saveGroup')}
-              onPress={handleSaveGroup}
-            />
+            {isNaming ? (
+              <View style={styles.groupNameRow}>
+                <TextInput
+                  ref={groupInputRef}
+                  value={groupNameInput}
+                  onChangeText={setGroupNameInput}
+                  onSubmitEditing={handleConfirmGroupName}
+                  placeholder={t('roster.groupNamePrompt')}
+                  placeholderTextColor={color.text3}
+                  style={styles.groupNameInput}
+                  returnKeyType="done"
+                  maxLength={20}
+                  autoCapitalize="words"
+                />
+                <Pressable onPress={handleConfirmGroupName} style={styles.groupNameSaveBtn}>
+                  <Text style={styles.groupNameSaveBtnText}>Save</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <SecondaryButton
+                label={t('roster.saveGroup')}
+                onPress={handleSaveGroup}
+              />
+            )}
           </View>
         )}
       </ScrollView>
@@ -614,6 +644,35 @@ const styles = StyleSheet.create({
     marginTop: space.md,
     alignItems: 'center',
     gap: space.xs,
+  },
+  groupNameRow: {
+    flexDirection: 'row',
+    gap: space.sm,
+    alignItems: 'center',
+    width: '100%',
+  },
+  groupNameInput: {
+    flex: 1,
+    fontFamily: font.bodyMedium,
+    fontSize: fontSize.body,
+    color: color.text,
+    backgroundColor: color.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.amber,
+    paddingVertical: 10,
+    paddingHorizontal: space.md,
+  },
+  groupNameSaveBtn: {
+    backgroundColor: color.amber,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: space.md,
+  },
+  groupNameSaveBtnText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: color.bg,
   },
   bottomBar: {
     paddingHorizontal: space.lg,
