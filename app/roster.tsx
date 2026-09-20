@@ -808,16 +808,16 @@ const styles = StyleSheet.create({
   // ── Modal ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCard: {
     width: Dimensions.get('window').width * 0.78,
-    backgroundColor: color.surface,
+    backgroundColor: color.bg2,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: color.border,
+    borderColor: color.borderLight,
     padding: space.lg,
     alignItems: 'center',
     gap: space.md,

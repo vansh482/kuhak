@@ -131,29 +131,36 @@ export default function SetupScreen() {
   };
 
   const dealRound = () => {
-    const rng = makeRng();
-    const imposterIds = dealRoles(roster, 1, rng);
-    const { word, category, bagExhausted } = pickSecret(selectedPacks, usedWords, rng);
-    if (bagExhausted) resetUsedWords();
-    markWordUsed(word);
-    const secret = { word, category };
-    const startSeat = Math.floor(rng() * roster.length);
+    const state = useGameStore.getState();
+    const currentRoster = state.roster;
+    const currentPacks = state.selectedPacks;
+    const currentUsedWords = state.usedWords;
+    const currentHintMode = state.imposterHint;
+    const currentTimer = state.timerSeconds;
 
-    const resolvedPacks = selectedPacks.includes('__mixed__') ? ALL_PACK_IDS : selectedPacks;
+    const rng = makeRng();
+    const imposterIds = dealRoles(currentRoster, 1, rng);
+    const { word, category, bagExhausted } = pickSecret(currentPacks, currentUsedWords, rng);
+    if (bagExhausted) state.resetUsedWords();
+    state.markWordUsed(word);
+    const secret = { word, category };
+    const startSeat = Math.floor(rng() * currentRoster.length);
+
+    const resolvedPacks = currentPacks.includes('__mixed__') ? ALL_PACK_IDS : currentPacks;
     const pool = getAllEntries(resolvedPacks);
     const entry = pool.find((e) => e.word === word);
     const hint =
-      (imposterHint === 'category_hint' || imposterHint === 'hint_only') && entry
+      (currentHintMode === 'category_hint' || currentHintMode === 'hint_only') && entry
         ? pickHint(entry, rng)
         : null;
 
     const round: DealtRound = {
       config: {
-        players: roster,
+        players: currentRoster,
         imposterCount: 1,
-        packIds: selectedPacks,
-        timerSeconds,
-        imposterHint,
+        packIds: currentPacks,
+        timerSeconds: currentTimer,
+        imposterHint: currentHintMode,
       },
       imposterIds,
       secret,
@@ -161,7 +168,7 @@ export default function SetupScreen() {
       startSeat,
     };
 
-    setCurrentRound(round);
+    state.setCurrentRound(round);
     router.push('/play');
   };
 
