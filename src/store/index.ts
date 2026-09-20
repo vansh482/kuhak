@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Player, DealtRound, RoundOutcome, ImposterHint, SavedGroup, PlayerStats } from '../game/types';
+import { dealRoles, pickSecret, pickHint, makeRng } from '../game/logic';
+import { getAllEntries, ALL_PACK_IDS } from '../content';
 
 interface GameStore {
   roster: Player[];
@@ -50,6 +52,9 @@ interface GameStore {
   usedWords: string[];
   markWordUsed: (word: string) => void;
   resetUsedWords: () => void;
+
+  /** Creates a new round from current settings and stores it in currentRound. */
+  dealNewRound: () => DealtRound;
 
   playerStats: Record<string, PlayerStats>;
   recordRoundStats: (players: Player[], imposterIds: string[], outcome: RoundOutcome) => void;
@@ -156,6 +161,41 @@ export const useGameStore = create<GameStore>()(
       markWordUsed: (word) =>
         set((s) => ({ usedWords: [...s.usedWords, word.toLowerCase()] })),
       resetUsedWords: () => set({ usedWords: [] }),
+
+      dealNewRound: () => {
+        const s = get();
+        const rng = makeRng();
+        const imposterIds = dealRoles(s.roster, 1, rng);
+        const { word, category, bagExhausted } = pickSecret(s.selectedPacks, s.usedWords, rng);
+        if (bagExhausted) set({ usedWords: [] });
+        set((prev) => ({ usedWords: [...prev.usedWords, word.toLowerCase()] }));
+
+        const startSeat = Math.floor(rng() * s.roster.length);
+        const resolvedPacks = s.selectedPacks.includes('__mixed__') ? ALL_PACK_IDS : s.selectedPacks;
+        const pool = getAllEntries(resolvedPacks);
+        const entry = pool.find((e) => e.word === word);
+        const hint =
+          (s.imposterHint === 'category_hint' || s.imposterHint === 'hint_only') && entry
+            ? pickHint(entry, rng)
+            : null;
+
+        const round: DealtRound = {
+          config: {
+            players: s.roster,
+            imposterCount: 1,
+            packIds: s.selectedPacks,
+            timerSeconds: s.timerSeconds,
+            imposterHint: s.imposterHint,
+          },
+          imposterIds,
+          secret: { word, category },
+          imposterHint: hint,
+          startSeat,
+        };
+
+        set({ currentRound: round });
+        return round;
+      },
 
       playerStats: {},
       recordRoundStats: (players, imposterIds, outcome) =>

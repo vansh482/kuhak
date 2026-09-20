@@ -9,9 +9,7 @@ import Animated, {
 import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
-import { PACKS, ALL_PACK_IDS, getAllEntries } from '../src/content';
-import { dealRoles, pickSecret, pickHint, makeRng } from '../src/game/logic';
-import type { DealtRound } from '../src/game/types';
+import { PACKS, ALL_PACK_IDS } from '../src/content';
 
 const TIMER_OPTIONS = [
   { seconds: 0, label: 'None' },
@@ -91,11 +89,6 @@ export default function SetupScreen() {
     setSelectedPacks,
     timerSeconds,
     setTimerSeconds,
-    imposterHint,
-    setCurrentRound,
-    usedWords,
-    markWordUsed,
-    resetUsedWords,
   } = useGameStore();
 
   const playerCount = roster.length;
@@ -131,44 +124,7 @@ export default function SetupScreen() {
   };
 
   const dealRound = () => {
-    const state = useGameStore.getState();
-    const currentRoster = state.roster;
-    const currentPacks = state.selectedPacks;
-    const currentUsedWords = state.usedWords;
-    const currentHintMode = state.imposterHint;
-    const currentTimer = state.timerSeconds;
-
-    const rng = makeRng();
-    const imposterIds = dealRoles(currentRoster, 1, rng);
-    const { word, category, bagExhausted } = pickSecret(currentPacks, currentUsedWords, rng);
-    if (bagExhausted) state.resetUsedWords();
-    state.markWordUsed(word);
-    const secret = { word, category };
-    const startSeat = Math.floor(rng() * currentRoster.length);
-
-    const resolvedPacks = currentPacks.includes('__mixed__') ? ALL_PACK_IDS : currentPacks;
-    const pool = getAllEntries(resolvedPacks);
-    const entry = pool.find((e) => e.word === word);
-    const hint =
-      (currentHintMode === 'category_hint' || currentHintMode === 'hint_only') && entry
-        ? pickHint(entry, rng)
-        : null;
-
-    const round: DealtRound = {
-      config: {
-        players: currentRoster,
-        imposterCount: 1,
-        packIds: currentPacks,
-        timerSeconds: currentTimer,
-        imposterHint: currentHintMode,
-      },
-      imposterIds,
-      secret,
-      imposterHint: hint,
-      startSeat,
-    };
-
-    state.setCurrentRound(round);
+    useGameStore.getState().dealNewRound();
     router.push('/play');
   };
 

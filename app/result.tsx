@@ -36,6 +36,7 @@ export default function ResultScreen() {
 
   const handleNextRound = () => {
     setLastOutcome(null);
+    useGameStore.getState().dealNewRound();
     router.replace('/play');
   };
 
