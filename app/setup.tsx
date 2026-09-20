@@ -10,6 +10,7 @@ import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
 import { PACKS, ALL_PACK_IDS } from '../src/content';
+import NavBar from '../src/components/NavBar';
 
 const TIMER_OPTIONS = [
   { seconds: 0, label: 'None' },
@@ -18,35 +19,6 @@ const TIMER_OPTIONS = [
   { seconds: 180, label: '3m' },
   { seconds: 300, label: '5m' },
 ];
-
-function NavBar() {
-  const backScale = useSharedValue(1);
-  const backAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: backScale.value }],
-  }));
-
-  return (
-    <View style={styles.nav}>
-      <Animated.View style={backAnimStyle}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          onPressIn={() => {
-            backScale.value = withSpring(0.97, { damping: 15 });
-          }}
-          onPressOut={() => {
-            backScale.value = withSpring(1, { damping: 15 });
-          }}
-          style={styles.navBackBtn}
-          hitSlop={12}
-        >
-          <Text style={styles.navBackText}>{'←'}</Text>
-        </Pressable>
-      </Animated.View>
-      <Text style={styles.navTitle}>{t('setup.title')}</Text>
-      <View style={styles.navSpacer} />
-    </View>
-  );
-}
 
 function PrimaryButton({
   label,
@@ -132,7 +104,7 @@ export default function SetupScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + space.md }]}>
-      <NavBar />
+      <NavBar title={t('setup.title')} />
 
       <ScrollView
         style={styles.scroll}
@@ -240,37 +212,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: color.bg,
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.lg,
-    height: 48,
-  },
-  navBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBackText: {
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navSpacer: {
-    width: 40,
   },
   scroll: {
     flex: 1,

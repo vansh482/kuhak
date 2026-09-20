@@ -59,7 +59,17 @@ export function pickSecret(
   rng: RNG,
 ): { word: string; category: string; bagExhausted: boolean } {
   const resolvedPacks = packIds.includes('__mixed__') ? ALL_PACK_IDS : packIds;
-  const allEntries: WordEntry[] = getAllEntries(resolvedPacks);
+  const raw: WordEntry[] = getAllEntries(resolvedPacks);
+
+  const seen = new Set<string>();
+  const allEntries: WordEntry[] = [];
+  for (const e of raw) {
+    const key = e.word.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      allEntries.push(e);
+    }
+  }
 
   if (allEntries.length === 0) {
     throw new Error('No entries found for the selected packs');

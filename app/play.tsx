@@ -14,7 +14,6 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
   Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -59,6 +58,14 @@ export default function PlayScreen() {
     return () => sub.remove();
   }, []);
 
+  // Reset local state when a new round is dealt (component may not remount)
+  useEffect(() => {
+    setPhase('deal');
+    setVotedOutId(null);
+    setTimerRemaining(null);
+    setShowQuitModal(false);
+  }, [currentRound]);
+
   // Guard: no round data
   if (!currentRound) {
     return (
@@ -71,11 +78,6 @@ export default function PlayScreen() {
   const { config, imposterIds, secret, imposterHint: hintText, startSeat } = currentRound;
   const players = config.players;
   const orderedPlayers = clueOrder(players, startSeat);
-
-  // Initialize timer on first render
-  if (timerRemaining === null) {
-    // Will be set when discuss phase starts
-  }
 
   const resolveAndNavigate = (
     votedId: PlayerId,
@@ -389,9 +391,10 @@ function DiscussPhase({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [paused, noTimer, localRemaining > 0]);
+  }, [paused, noTimer, localRemaining, onTick]);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     if (!noTimer && localRemaining === 0) {
       if (hapticsEnabled) {
         const fireHaptics = async () => {
@@ -407,8 +410,9 @@ function DiscussPhase({
         };
         fireHaptics();
       }
-      setTimeout(onVote, 500);
+      timeoutId = setTimeout(onVote, 500);
     }
+    return () => { if (timeoutId) clearTimeout(timeoutId); };
   }, [localRemaining]);
 
   const displaySeconds = noTimer ? elapsed : localRemaining;

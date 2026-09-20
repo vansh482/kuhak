@@ -17,7 +17,6 @@ export const foodPack: WordPack = {
     { word: 'Samosa', category: 'Food', hints: ['Triangle', 'Fried', 'Potato', 'Chai Time', 'Crispy'] },
     { word: 'Jalebi', category: 'Food', hints: ['Syrup', 'Spiral', 'Orange', 'Fried', 'Crispy'] },
     { word: 'Gulab Jamun', category: 'Food', hints: ['Syrup', 'Khoya', 'Deep Fried', 'Dessert', 'Round'] },
-    { word: 'Rasgulla', category: 'Food', hints: ['Bengal', 'Spongy', 'Sugar Syrup', 'Chenna', 'White'] },
     { word: 'Momos', category: 'Food', hints: ['Steamed', 'Dumpling', 'Northeast', 'Chilli Sauce', 'Stuffed'] },
     { word: 'Kathi Roll', category: 'Food', hints: ['Kolkata', 'Paratha Wrap', 'Onion', 'Kebab', 'Street Food'] },
     { word: 'Litti Chokha', category: 'Food', hints: ['Bihar', 'Sattu', 'Roasted', 'Mashed Veggie', 'Desi Ghee'] },

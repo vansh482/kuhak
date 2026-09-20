@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, Switch, Alert, ScrollView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Switch, ScrollView, Dimensions, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -13,49 +14,17 @@ import { BRAND } from '../src/brand';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
 import type { ImposterHint } from '../src/game/types';
+import NavBar from '../src/components/NavBar';
 
 const TIMER_OPTIONS = [
+  { label: 'None', seconds: 0 },
   { label: '1m', seconds: 60 },
   { label: '2m', seconds: 120 },
   { label: '3m', seconds: 180 },
   { label: '5m', seconds: 300 },
 ];
 
-const HINT_OPTIONS: { label: string; value: ImposterHint }[] = [
-  { label: t('settings.hintNone'), value: 'none' },
-  { label: t('settings.hintCategory'), value: 'category' },
-  { label: t('settings.hintHintOnly'), value: 'hint_only' },
-  { label: t('settings.hintCategoryHint'), value: 'category_hint' },
-];
-
-function NavBar() {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <View style={styles.nav}>
-      <Animated.View style={animStyle}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          onPressIn={() => {
-            scale.value = withSpring(0.97, { damping: 15 });
-          }}
-          onPressOut={() => {
-            scale.value = withSpring(1, { damping: 15 });
-          }}
-          style={styles.navBackBtn}
-          hitSlop={12}
-        >
-          <Text style={styles.navBackText}>{'←'}</Text>
-        </Pressable>
-      </Animated.View>
-      <Text style={styles.navTitle}>{t('settings.title')}</Text>
-      <View style={styles.navSpacer} />
-    </View>
-  );
-}
+const { width: SCREEN_W } = Dimensions.get('window');
 
 function ToggleRow({
   label,
@@ -122,6 +91,15 @@ export default function SettingsScreen() {
     resetAll,
   } = useGameStore();
 
+  const [showResetModal, setShowResetModal] = useState(false);
+
+  const hintOptions: { label: string; value: ImposterHint }[] = [
+    { label: t('settings.hintNone'), value: 'none' },
+    { label: t('settings.hintCategory'), value: 'category' },
+    { label: t('settings.hintHintOnly'), value: 'hint_only' },
+    { label: t('settings.hintCategoryHint'), value: 'category_hint' },
+  ];
+
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const dangerScale = useSharedValue(1);
   const dangerAnimStyle = useAnimatedStyle(() => ({
@@ -129,29 +107,18 @@ export default function SettingsScreen() {
   }));
 
   const handleReset = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(t('settings.resetConfirm'))) {
-        resetAll();
-        router.replace('/');
-      }
-    } else {
-      Alert.alert(t('settings.resetAll'), t('settings.resetConfirm'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          style: 'destructive',
-          onPress: () => {
-            resetAll();
-            router.replace('/');
-          },
-        },
-      ]);
-    }
+    setShowResetModal(true);
+  };
+
+  const confirmReset = () => {
+    setShowResetModal(false);
+    resetAll();
+    router.replace('/');
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + space.md }]}>
-      <NavBar />
+      <NavBar title={t('settings.title')} />
 
       <ScrollView
         style={styles.scroll}
@@ -192,7 +159,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('settings.imposterHint')}</Text>
           <ChipSelector
-            options={HINT_OPTIONS}
+            options={hintOptions}
             selected={imposterHint}
             onSelect={setImposterHint}
           />
@@ -229,6 +196,37 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showResetModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowResetModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowResetModal(false)}
+        >
+          <Pressable style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('settings.resetAll')}</Text>
+            <Text style={styles.modalBody}>{t('settings.resetConfirm')}</Text>
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setShowResetModal(false)}
+              >
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalConfirmBtn}
+                onPress={confirmReset}
+              >
+                <Text style={styles.modalConfirmText}>{t('common.confirm')}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -237,37 +235,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: color.bg,
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.lg,
-    height: 48,
-  },
-  navBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBackText: {
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navSpacer: {
-    width: 40,
   },
   scroll: {
     flex: 1,
@@ -358,5 +325,66 @@ const styles = StyleSheet.create({
     fontSize: fontSize.small,
     color: color.text2,
     textDecorationLine: 'underline',
+  },
+
+  // ── Reset modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: SCREEN_W * 0.78,
+    backgroundColor: color.bg2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: color.borderLight,
+    padding: space.lg,
+    alignItems: 'center',
+    gap: space.lg,
+  },
+  modalTitle: {
+    fontFamily: font.heading,
+    fontSize: fontSize.h2,
+    color: color.text,
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontFamily: font.body,
+    fontSize: fontSize.body,
+    color: color.text2,
+    textAlign: 'center',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: space.md,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.surfaceElevated,
+    borderWidth: 1,
+    borderColor: color.border,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: color.text,
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.coral,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: '#FFFFFF',
   },
 });

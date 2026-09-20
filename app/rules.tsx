@@ -1,13 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
+import NavBar from '../src/components/NavBar';
 
 const STEPS = [
   { emoji: '🤫', key: 'rules.step1' as const },
@@ -18,32 +13,10 @@ const STEPS = [
 
 export default function RulesScreen() {
   const insets = useSafeAreaInsets();
-  const backScale = useSharedValue(1);
-  const backAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: backScale.value }],
-  }));
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + space.md }]}>
-      <View style={styles.nav}>
-        <Animated.View style={backAnimStyle}>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            onPressIn={() => {
-              backScale.value = withSpring(0.97, { damping: 15 });
-            }}
-            onPressOut={() => {
-              backScale.value = withSpring(1, { damping: 15 });
-            }}
-            style={styles.navBackBtn}
-            hitSlop={12}
-          >
-            <Text style={styles.navBackText}>{'←'}</Text>
-          </Pressable>
-        </Animated.View>
-        <Text style={styles.navTitle}>{t('rules.title')}</Text>
-        <View style={styles.navSpacer} />
-      </View>
+      <NavBar title={t('rules.title')} />
 
       <ScrollView
         style={styles.scroll}
@@ -70,37 +43,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: color.bg,
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.lg,
-    height: 48,
-  },
-  navBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBackText: {
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navSpacer: {
-    width: 40,
   },
   scroll: {
     flex: 1,

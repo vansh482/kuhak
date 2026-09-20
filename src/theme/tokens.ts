@@ -2,13 +2,10 @@ export const color = {
   bg: '#08080C',
   bg2: '#0E0E14',
   surface: 'rgba(255,255,255,0.04)',
-  surfaceHover: 'rgba(255,255,255,0.07)',
   surfaceElevated: 'rgba(255,255,255,0.06)',
   border: 'rgba(255,255,255,0.06)',
   borderLight: 'rgba(255,255,255,0.1)',
   amber: '#F0A030',
-  amberLight: '#FBBF4E',
-  amberGlow: 'rgba(240,160,48,0.15)',
   amberSoft: 'rgba(240,160,48,0.08)',
   coral: '#FF6B6B',
   coralGlow: 'rgba(255,107,107,0.12)',
@@ -43,7 +40,6 @@ export const font = {
   headingSemi: 'PlusJakartaSans_600SemiBold',
   body: 'DMSans_400Regular',
   bodyMedium: 'DMSans_500Medium',
-  bodyBold: 'DMSans_700Bold',
 } as const;
 
 export const fontSize = {

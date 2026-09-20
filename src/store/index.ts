@@ -62,15 +62,13 @@ interface GameStore {
   resetAll: () => void;
 }
 
-let nextPlayerId = 1;
-
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       roster: [],
       setRoster: (roster) => set({ roster }),
       addPlayer: (name) => {
-        const id = `p_${nextPlayerId++}`;
+        const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         const { roster } = get();
         set({
           roster: [...roster, { id, name, seat: roster.length }],
@@ -165,7 +163,7 @@ export const useGameStore = create<GameStore>()(
       dealNewRound: () => {
         const s = get();
         const rng = makeRng();
-        const imposterIds = dealRoles(s.roster, 1, rng);
+        const imposterIds = dealRoles(s.roster, s.imposterCount, rng);
         const { word, category, bagExhausted } = pickSecret(s.selectedPacks, s.usedWords, rng);
         if (bagExhausted) set({ usedWords: [] });
         set((prev) => ({ usedWords: [...prev.usedWords, word.toLowerCase()] }));
@@ -182,7 +180,7 @@ export const useGameStore = create<GameStore>()(
         const round: DealtRound = {
           config: {
             players: s.roster,
-            imposterCount: 1,
+            imposterCount: s.imposterCount,
             packIds: s.selectedPacks,
             timerSeconds: s.timerSeconds,
             imposterHint: s.imposterHint,
@@ -202,7 +200,7 @@ export const useGameStore = create<GameStore>()(
         set((s) => {
           const next = { ...s.playerStats };
           for (const p of players) {
-            const key = p.name.toLowerCase();
+            const key = p.id;
             const prev = next[key] || { roundsPlayed: 0, timesImposter: 0, timesCaught: 0, timesWalkedFree: 0, totalScore: 0 };
             const wasImposter = imposterIds.includes(p.id);
             next[key] = {
@@ -247,6 +245,7 @@ export const useGameStore = create<GameStore>()(
         soundEnabled: state.soundEnabled,
         hapticsEnabled: state.hapticsEnabled,
         savedGroups: state.savedGroups,
+        activeGroupId: state.activeGroupId,
         usedWords: state.usedWords,
         playerStats: state.playerStats,
       }),

@@ -20,43 +20,10 @@ import Animated, {
 import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
+import NavBar from '../src/components/NavBar';
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 12;
-
-function NavBar({ groupName }: { groupName?: string }) {
-  const backScale = useSharedValue(1);
-  const backAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: backScale.value }],
-  }));
-
-  return (
-    <View style={styles.nav}>
-      <Animated.View style={backAnimStyle}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          onPressIn={() => {
-            backScale.value = withSpring(0.97, { damping: 15 });
-          }}
-          onPressOut={() => {
-            backScale.value = withSpring(1, { damping: 15 });
-          }}
-          style={styles.navBackBtn}
-          hitSlop={12}
-        >
-          <Text style={styles.navBackText}>{'←'}</Text>
-        </Pressable>
-      </Animated.View>
-      <View style={styles.navCenter}>
-        <Text style={styles.navTitle}>{t('roster.title')}</Text>
-        {groupName && (
-          <Text style={styles.navSubtitle}>{groupName}</Text>
-        )}
-      </View>
-      <View style={styles.navSpacer} />
-    </View>
-  );
-}
 
 function PlayerRow({
   index,
@@ -280,7 +247,7 @@ export default function RosterScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + space.md }]}>
-      <NavBar groupName={activeGroup?.name} />
+      <NavBar title={t('roster.title')} subtitle={activeGroup?.name} />
 
       <ScrollView
         style={styles.scroll}
@@ -497,46 +464,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: color.bg,
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.lg,
-    height: 48,
-  },
-  navBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navBackText: {
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  navTitle: {
-    textAlign: 'center',
-    fontFamily: font.heading,
-    fontSize: fontSize.h2,
-    color: color.text,
-  },
-  navSubtitle: {
-    fontFamily: font.bodyMedium,
-    fontSize: fontSize.small,
-    color: color.amber,
-    marginTop: 2,
-  },
-  navSpacer: {
-    width: 40,
   },
   scroll: {
     flex: 1,
