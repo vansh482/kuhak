@@ -40,6 +40,7 @@ interface GameStore {
   setHapticsEnabled: (enabled: boolean) => void;
 
   activeGroupId: string | null;
+  clearRoster: () => void;
   savedGroups: SavedGroup[];
   saveCurrentGroup: (name: string) => void;
   updateGroup: (id: string) => void;
@@ -117,6 +118,7 @@ export const useGameStore = create<GameStore>()(
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
 
       activeGroupId: null,
+      clearRoster: () => set({ roster: [], activeGroupId: null }),
       savedGroups: [],
       saveCurrentGroup: (name) =>
         set((s) => {

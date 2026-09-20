@@ -5,8 +5,8 @@ import {
   Pressable,
   StyleSheet,
   Dimensions,
-  Alert,
   BackHandler,
+  Modal,
   ScrollView,
 } from 'react-native';
 import Animated, {
@@ -46,24 +46,18 @@ export default function PlayScreen() {
 
   // Discuss timer state — lifted here so "back to discussion" resumes
   const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
+  const [showQuitModal, setShowQuitModal] = useState(false);
 
   // ── Back handler ────────────────────────────────────────────────────────
   useEffect(() => {
     const onBackPress = () => {
-      Alert.alert(t('play.quitRound'), '', [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('play.quitConfirm'),
-          style: 'destructive',
-          onPress: () => router.replace('/'),
-        },
-      ]);
+      setShowQuitModal(true);
       return true;
     };
 
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [router]);
+  }, []);
 
   // Guard: no round data
   if (!currentRound) {
@@ -161,6 +155,39 @@ export default function PlayScreen() {
           }}
         />
       )}
+
+      <Modal
+        visible={showQuitModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowQuitModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowQuitModal(false)}
+        >
+          <Pressable style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('play.quitRound')}</Text>
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setShowQuitModal(false)}
+              >
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalQuitBtn}
+                onPress={() => {
+                  setShowQuitModal(false);
+                  router.replace('/');
+                }}
+              >
+                <Text style={styles.modalQuitText}>{t('play.quitConfirm')}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -492,7 +519,7 @@ function VotePhase({
           return (
             <Pressable
               key={player.id}
-              onPress={() => setSelectedId(player.id)}
+              onPress={() => setSelectedId(prev => prev === player.id ? null : player.id)}
               style={[
                 styles.voteCard,
                 isSelected && styles.voteCardSelected,
@@ -803,24 +830,25 @@ const styles = StyleSheet.create({
   voteGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: space.md,
+    gap: space.lg,
     justifyContent: 'center',
     marginBottom: space.xl,
-    paddingHorizontal: space.sm,
+    paddingHorizontal: space.md,
   },
   voteCard: {
-    width: (SCREEN_W - space.lg * 2 - space.md) / 2 - space.sm,
+    width: (SCREEN_W - space.lg * 2 - space.lg) / 2 - space.md,
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
     borderRadius: radius.md,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: color.border,
     alignItems: 'center',
   },
   voteCardSelected: {
     backgroundColor: color.coralGlow,
     borderColor: color.coral,
+    borderWidth: 2,
   },
   voteCardText: {
     fontFamily: font.headingSemi,
@@ -925,5 +953,60 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     color: color.text2,
     textDecorationLine: 'underline',
+  },
+
+  // ── Quit modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: SCREEN_W * 0.78,
+    backgroundColor: color.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: color.border,
+    padding: space.lg,
+    alignItems: 'center',
+    gap: space.lg,
+  },
+  modalTitle: {
+    fontFamily: font.heading,
+    fontSize: fontSize.h2,
+    color: color.text,
+    textAlign: 'center',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: space.md,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.surfaceElevated,
+    borderWidth: 1,
+    borderColor: color.border,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: color.text,
+  },
+  modalQuitBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.coral,
+    alignItems: 'center',
+  },
+  modalQuitText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: '#FFFFFF',
   },
 });

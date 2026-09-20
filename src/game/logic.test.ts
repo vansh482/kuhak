@@ -1,5 +1,5 @@
 import type { Player, RNG, WordEntry } from './types';
-import { dealRoles, maxImposters, pickSecret, pickHint, clueOrder, resolveVote } from './logic';
+import { dealRoles, maxImposters, pickSecret, pickHint, clueOrder, resolveVote, makeRng } from './logic';
 
 // ---------------------------------------------------------------------------
 // Mock the content module (not yet built by another agent)
@@ -227,6 +227,28 @@ describe('pickHint', () => {
       const hint = pickHint(entry, mulberry32(i));
       expect(hint).not.toBe('Tiger');
     }
+  });
+});
+
+// ===========================================================================
+// makeRng
+// ===========================================================================
+describe('makeRng', () => {
+  it('produces values between 0 and 1', () => {
+    const rng = makeRng();
+    for (let i = 0; i < 100; i++) {
+      const v = rng();
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
+  });
+
+  it('successive calls return different sequences', () => {
+    const rng1 = makeRng();
+    const rng2 = makeRng();
+    const seq1 = Array.from({ length: 5 }, () => rng1());
+    const seq2 = Array.from({ length: 5 }, () => rng2());
+    expect(seq1).not.toEqual(seq2);
   });
 });
 

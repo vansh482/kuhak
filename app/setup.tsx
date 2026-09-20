@@ -10,7 +10,7 @@ import { color, font, fontSize, radius, space } from '../src/theme/tokens';
 import { t } from '../src/i18n';
 import { useGameStore } from '../src/store';
 import { PACKS, ALL_PACK_IDS, getAllEntries } from '../src/content';
-import { dealRoles, pickSecret, pickHint } from '../src/game/logic';
+import { dealRoles, pickSecret, pickHint, makeRng } from '../src/game/logic';
 import type { DealtRound } from '../src/game/types';
 
 const TIMER_OPTIONS = [
@@ -131,19 +131,20 @@ export default function SetupScreen() {
   };
 
   const dealRound = () => {
-    const imposterIds = dealRoles(roster, 1, Math.random);
-    const { word, category, bagExhausted } = pickSecret(selectedPacks, usedWords, Math.random);
+    const rng = makeRng();
+    const imposterIds = dealRoles(roster, 1, rng);
+    const { word, category, bagExhausted } = pickSecret(selectedPacks, usedWords, rng);
     if (bagExhausted) resetUsedWords();
     markWordUsed(word);
     const secret = { word, category };
-    const startSeat = Math.floor(Math.random() * roster.length);
+    const startSeat = Math.floor(rng() * roster.length);
 
     const resolvedPacks = selectedPacks.includes('__mixed__') ? ALL_PACK_IDS : selectedPacks;
     const pool = getAllEntries(resolvedPacks);
     const entry = pool.find((e) => e.word === word);
     const hint =
       (imposterHint === 'category_hint' || imposterHint === 'hint_only') && entry
-        ? pickHint(entry, Math.random)
+        ? pickHint(entry, rng)
         : null;
 
     const round: DealtRound = {

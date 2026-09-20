@@ -27,6 +27,7 @@ export const en = {
     groupNamePrompt: 'Group name',
     noSavedGroups: 'No saved groups yet',
     deleteGroup: 'Delete group',
+    startFresh: 'Start fresh',
     playerCount: '{count} players',
   },
   setup: {

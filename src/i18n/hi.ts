@@ -29,6 +29,7 @@ export const hi: Translations = {
     groupNamePrompt: 'Group name',
     noSavedGroups: 'No saved groups yet',
     deleteGroup: 'Delete group',
+    startFresh: 'Start fresh',
     playerCount: '{count} players',
   },
   setup: {

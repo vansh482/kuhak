@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   Pressable,
   ScrollView,
   TextInput,
-  Alert,
+  Modal,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -71,17 +72,7 @@ function PlayerRow({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(name);
   const editRef = useRef<TextInput>(null);
-
-  const handleLongPress = () => {
-    Alert.alert(
-      t('roster.holdToRemove'),
-      name,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.confirm'), style: 'destructive', onPress: onRemove },
-      ],
-    );
-  };
+  const isCommittingRef = useRef(false);
 
   const handleTap = () => {
     setEditValue(name);
@@ -90,11 +81,14 @@ function PlayerRow({
   };
 
   const handleDoneEditing = () => {
+    if (isCommittingRef.current) return;
+    isCommittingRef.current = true;
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== name) {
       onRename(trimmed);
     }
     setEditing(false);
+    setTimeout(() => { isCommittingRef.current = false; }, 100);
   };
 
   return (
@@ -192,7 +186,7 @@ function SecondaryButton({
 
 export default function RosterScreen() {
   const insets = useSafeAreaInsets();
-  const { roster, addPlayer, removePlayer, renamePlayer, setRoster, activeGroupId, savedGroups, saveCurrentGroup, updateGroup, deleteGroup, loadGroup } = useGameStore();
+  const { roster, addPlayer, removePlayer, renamePlayer, setRoster, clearRoster, activeGroupId, savedGroups, saveCurrentGroup, updateGroup, deleteGroup, loadGroup } = useGameStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [isNaming, setIsNaming] = useState(false);
@@ -200,6 +194,19 @@ export default function RosterScreen() {
   const inputRef = useRef<TextInput>(null);
   const groupInputRef = useRef<TextInput>(null);
   const isSubmittingRef = useRef(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    subtitle?: string;
+    onConfirm: () => void;
+  } | null>(null);
+  const [toastText, setToastText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastText) return;
+    const t = setTimeout(() => setToastText(null), 1800);
+    return () => clearTimeout(t);
+  }, [toastText]);
 
   const canContinue = roster.length >= MIN_PLAYERS;
   const canAdd = roster.length < MAX_PLAYERS;
@@ -251,7 +258,7 @@ export default function RosterScreen() {
     const trimmed = groupNameInput.trim();
     if (trimmed) {
       saveCurrentGroup(trimmed);
-      Alert.alert(`Group "${trimmed}" saved!`);
+      setToastText(`Group "${trimmed}" saved!`);
     }
     setIsNaming(false);
     setGroupNameInput('');
@@ -263,10 +270,11 @@ export default function RosterScreen() {
         deleteGroup(id);
       }
     } else {
-      Alert.alert(t('roster.deleteGroup'), name, [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.confirm'), style: 'destructive', onPress: () => deleteGroup(id) },
-      ]);
+      setConfirmModal({
+        title: t('roster.deleteGroup'),
+        subtitle: name,
+        onConfirm: () => deleteGroup(id),
+      });
     }
   };
 
@@ -325,7 +333,13 @@ export default function RosterScreen() {
             key={player.id}
             index={i}
             name={player.name}
-            onRemove={() => removePlayer(player.id)}
+            onRemove={() =>
+              setConfirmModal({
+                title: t('roster.holdToRemove'),
+                subtitle: player.name,
+                onConfirm: () => removePlayer(player.id),
+              })
+            }
             onRename={(newName) => renamePlayer(player.id, newName)}
           />
         ))}
@@ -376,7 +390,7 @@ export default function RosterScreen() {
                   if (Platform.OS === 'web') {
                     window.alert(`Group "${activeGroup.name}" updated!`);
                   } else {
-                    Alert.alert(`Group "${activeGroup.name}" updated!`);
+                    setToastText(`Group "${activeGroup.name}" updated!`);
                   }
                 }}
               />
@@ -407,6 +421,13 @@ export default function RosterScreen() {
             )}
           </View>
         )}
+        {roster.length > 0 && (
+          <View style={styles.startFreshRow}>
+            <Pressable onPress={clearRoster} style={styles.startFreshBtn}>
+              <Text style={styles.startFreshText}>{t('roster.startFresh')}</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom bar */}
@@ -422,6 +443,52 @@ export default function RosterScreen() {
           disabled={!canContinue}
         />
       </View>
+
+      {/* Confirm modal */}
+      <Modal
+        visible={!!confirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmModal(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setConfirmModal(null)}
+        >
+          <Pressable style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{confirmModal?.title}</Text>
+            {confirmModal?.subtitle && (
+              <Text style={styles.modalSubtitle}>{confirmModal.subtitle}</Text>
+            )}
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => setConfirmModal(null)}
+              >
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalConfirmBtn}
+                onPress={() => {
+                  confirmModal?.onConfirm();
+                  setConfirmModal(null);
+                }}
+              >
+                <Text style={styles.modalConfirmText}>{t('common.confirm')}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Toast */}
+      {toastText && (
+        <View style={styles.toastWrap} pointerEvents="none">
+          <View style={styles.toast}>
+            <Text style={styles.toastText}>{toastText}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -720,5 +787,105 @@ const styles = StyleSheet.create({
     fontFamily: font.bodyMedium,
     fontSize: fontSize.body,
     color: color.text2,
+  },
+
+  // ── Start fresh ──
+  startFreshRow: {
+    marginTop: space.sm,
+    alignItems: 'center',
+  },
+  startFreshBtn: {
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+  },
+  startFreshText: {
+    fontFamily: font.bodyMedium,
+    fontSize: fontSize.small,
+    color: color.text3,
+    textDecorationLine: 'underline',
+  },
+
+  // ── Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: Dimensions.get('window').width * 0.78,
+    backgroundColor: color.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: color.border,
+    padding: space.lg,
+    alignItems: 'center',
+    gap: space.md,
+  },
+  modalTitle: {
+    fontFamily: font.heading,
+    fontSize: fontSize.h2,
+    color: color.text,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontFamily: font.bodyMedium,
+    fontSize: fontSize.body,
+    color: color.text2,
+    textAlign: 'center',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: space.md,
+    width: '100%',
+    marginTop: space.sm,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.surfaceElevated,
+    borderWidth: 1,
+    borderColor: color.border,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: color.text,
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: color.coral,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontFamily: font.headingSemi,
+    fontSize: fontSize.body,
+    color: '#FFFFFF',
+  },
+
+  // ── Toast ──
+  toastWrap: {
+    position: 'absolute',
+    bottom: 120,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  toast: {
+    backgroundColor: color.surfaceElevated,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.border,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+  },
+  toastText: {
+    fontFamily: font.bodyMedium,
+    fontSize: fontSize.body,
+    color: color.amber,
   },
 });
